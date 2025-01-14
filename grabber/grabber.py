@@ -137,7 +137,7 @@ def grab_picture(link, name):
                     clean_name = clean_name.replace(' ', '_')
                     
                     # 构建文件名
-                    filename = f"{date_str}_{time_str}_{clean_name}.jpg"
+                    filename = f"{clean_name}_{date_str}_{time_str}.jpg"
                     filepath = os.path.join(image_folder, filename)
                     
                     # 下载图片
@@ -156,17 +156,16 @@ def grab_picture(link, name):
 
                 except Exception as e:
                     print(f"grab picture of {name} failed: {str(e)}")
-                    time.sleep(5)
-                    continue
+                    return False
                 
             except Exception as e:
                 print(f"grab picture of {name} failed: {str(e)}")
-                time.sleep(10)
-                continue
+                return False
                 
     except Exception as e:
         print(f"grab picture of {name} failed: {str(e)}")
-    
+        return False
+
     finally:
         try:
             driver.close()
