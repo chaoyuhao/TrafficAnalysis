@@ -10,11 +10,12 @@ import os
 from datetime import datetime
 
 # 目标页面
-url = "https://www.weatherbug.com/traffic-cam/victoria-hong-kong-ch"
+# url = "https://www.weatherbug.com/traffic-cam/victoria-hong-kong-ch"
+url = "https://www.weatherbug.com/traffic-cam/wilmington-nc-28403"
 # 保存的json文件
-json_file = "hongkong.json"
+json_file = "wilmington.json"
 # 保存的图片文件夹
-image_folder = "hongkong"
+image_folder = "wilmington"
 # 超时时间
 load_time = 15
 # 是否保存json文件
@@ -111,17 +112,25 @@ def grab_picture(link, name):
         while True:
             try:
                 # 查找图片元素，使用链接前缀定位
-                img_element = driver.find_element(
-                    By.XPATH, 
-                    "//img[contains(@src, 'https://ie.trafficland.com/v2.0/')]"
-                )
-                img_url = img_element.get_attribute('src')
-                
+
+                try:
+                    img_element = driver.find_element(
+                        By.XPATH, 
+                        "//img[contains(@src, 'https://ie.trafficland.com/v2.0/')]"
+                    )
+                    img_url = img_element.get_attribute('src')
+                except:
+                    img_element = driver.find_element(
+                        By.XPATH, 
+                        "//img[contains(@src, 'https://cameras-cam.cdn.weatherbug.net/')]"
+                    )
+                    img_url = img_element.get_attribute('src')
+
                 # 检查是否是新图片
                 global saved_image_urls
                 if img_url in saved_image_urls:
                     print(f"grab picture of {name} failed: {img_url} already saved")
-                    time.sleep(10)
+                    time.sleep(30)
                     continue
                 else:
                     print(f"grab picture of {name} start: {img_url}")
@@ -174,6 +183,83 @@ def grab_picture(link, name):
         except:
             pass
 
+def grab_picture_request(link, name):
+    """使用requests库抓取摄像头图片"""
+    print(f"grab picture of {name} start")
+    
+    # 创建图片保存目录
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
+    
+    try:
+        # 获取页面HTML内容
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(link, headers=headers)
+        html_content = response.text
+        
+        # 尝试从HTML中提取图片URL
+        import re
+        img_url = None
+        patterns = [
+            r'https://ie\.trafficland\.com/v2\.0/[^"\']+',
+            r'https://cameras-cam\.cdn\.weatherbug\.net/[^"\']+\.jpg'
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, html_content)
+            if matches:
+                img_url = matches[0]
+                break
+        
+        if not img_url:
+            print(f"grab picture of {name} failed: cannot find image url")
+            return False
+            
+        # 检查是否是新图片
+        global saved_image_urls
+        if img_url in saved_image_urls:
+            print(f"grab picture of {name} failed: {img_url} already saved")
+            return False
+            
+        print(f"grab picture of {name} start: {img_url}")
+        
+        # 下载图片
+        try:
+            # 获取当前时间
+            current_time = datetime.now()
+            date_str = current_time.strftime("%Y%m%d")
+            time_str = current_time.strftime("%H%M%S")
+            
+            # 清理名称，移除非法字符
+            clean_name = "".join(x for x in name if x.isalnum() or x in [' ', '-', '_'])
+            clean_name = clean_name.replace(' ', '_')
+            
+            # 构建文件名
+            filename = f"{clean_name}_{date_str}_{time_str}.jpg"
+            filepath = os.path.join(image_folder, filename)
+            
+            # 下载图片
+            img_response = requests.get(img_url, headers=headers)
+            if img_response.status_code == 200:
+                with open(filepath, 'wb') as f:
+                    f.write(img_response.content)
+                print(f"grab picture of {name} done: {filename}")
+                saved_image_urls.add(img_url)
+                return True
+            else:
+                print(f"grab picture of {name} failed: status code {img_response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"grab picture of {name} failed when saving: {str(e)}")
+            return False
+            
+    except Exception as e:
+        print(f"grab picture of {name} failed: {str(e)}")
+        return False
+
 def save_camera_links(camera_links):
     """save camera links to json file"""
     try:
@@ -216,9 +302,10 @@ if __name__ == "__main__":
     if save_json:
         save_camera_links(camera_links)
 
-    for camera in camera_links: 
-        grab_picture(camera[0], camera[1])
-        time.sleep(30)
+    while True:
+        for camera in camera_links: 
+            if grab_picture_request(camera[0], camera[1]):
+                time.sleep(5)
 
     print(f'total cameras: {len(camera_links)}')
 

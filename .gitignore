@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+grabber/hongkong/
+grabber/northcarolina/
 
 # C extensions
 *.so
