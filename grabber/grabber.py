@@ -8,22 +8,42 @@ import time
 import sys
 import os
 from datetime import datetime
+import argparse
 
 # 目标页面
 # url = "https://www.weatherbug.com/traffic-cam/victoria-hong-kong-ch"
-url = "https://www.weatherbug.com/traffic-cam/wilmington-nc-28403"
+# url = "https://www.weatherbug.com/traffic-cam/wilmington-nc-28403"
+# url = "https://www.weatherbug.com/traffic-cam/quebec-quebec-ca"
+#url = "https://www.weatherbug.com/traffic-cam/ottawa-ontario-ca"
 # 保存的json文件
-json_file = "wilmington.json"
+# json_file = "hongkong.json"
 # 保存的图片文件夹
-image_folder = "wilmington"
+# image_folder = "hongkong"
 # 超时时间
 load_time = 15
 # 是否保存json文件
 save_json = True
 # 是否从json文件读取链接
 load_json = True
-# 在文件开头添加全局变量
+# 已保存的图片URL
 saved_image_urls = set()
+
+def parse_arguments():
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(description='抓取交通摄像头图片')
+    parser.add_argument('--url', type=str, required=True,
+                      help='目标网页URL', default="https://www.weatherbug.com/traffic-cam/victoria-hong-kong-ch")
+    parser.add_argument('--json', type=str, required=True,
+                      help='保存/读取的JSON文件路径', default="hongkong.json")
+    parser.add_argument('--folder', type=str, required=True,
+                      help='图片保存文件夹路径', default="hongkong")
+    parser.add_argument('--load-time', type=int, default=15,
+                      help='页面加载超时时间(秒)')
+    parser.add_argument('--save-json', action='store_true', default=True,
+                      help='是否保存JSON文件')
+    parser.add_argument('--load-json', action='store_true', default=True,
+                      help='是否从JSON文件读取链接')
+    return parser.parse_args()
 
 def create_driver():
     """创建并配置浏览器驱动"""
@@ -285,19 +305,30 @@ def load_camera_links(json_file):
         print(f"load json failed: {str(e)}")
         return []
 
+
 if __name__ == "__main__":
-    load_time = 15
+    # 解析命令行参数
+    args = parse_arguments()
+    
+    # 使用参数替代原来的全局变量
+    url = args.url
+    json_file = args.json
+    image_folder = args.folder
+    load_time = args.load_time
+    save_json = args.save_json
+    load_json = args.load_json
+
     if load_json:
         camera_links = load_camera_links(json_file)
     else:
         while True:
             try:
                 camera_links = grab_traffic_cameras_links(url, load_time)
-                break;
+                break
             except Exception as e:
                 load_time += 1
                 time.sleep(5)
-                continue;
+                continue
     
     if save_json:
         save_camera_links(camera_links)

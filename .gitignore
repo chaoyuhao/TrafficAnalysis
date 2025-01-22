@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 grabber/hongkong/
 grabber/northcarolina/
+grabber/wilmington/
+grabber/ottawa/
+grabber/quebec/
 
 # C extensions
 *.so
